@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quizienza Tool - Analisi Duplicati</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sapienza-red: #990000;
+            --sapienza-gold: #C4B37B;
+            --sapienza-white: #FFFFFF;
+            --sapienza-light-gray: #F5F5F5;
+            --sapienza-dark-gray: #333333;
+            --success-color: #27ae60;
+            --warning-color: #ff9800;
+            --danger-color: #e74c3c;
+            --edit-color: #3498db;
+            --similar-color: #C4B37B;
+            --exact-color: #990000;
+            --box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            --box-shadow-hover: 0 8px 16px rgba(0, 0, 0, 0.2);
+            --border-radius: 10px;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--sapienza-light-gray) 0%, #e9e9e9 100%);
+            color: var(--sapienza-dark-gray);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--sapienza-white);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+            transform: translateZ(0);
+        }
+
+        .main-header {
+            background: linear-gradient(135deg, var(--sapienza-red) 0%, #7a0000 100%);
+            color: var(--sapienza-white);
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .main-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 60%);
+            transform: rotate(30deg);
+        }
+
+        .main-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .main-header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .subject-selector {
+            background: var(--sapienza-white);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .subject-selector h3 {
+            color: var(--sapienza-red);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.4rem;
+        }
+
+        .subject-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .subject-btn {
+            background: var(--sapienza-white);
+            color: var(--sapienza-red);
+            border: 2px solid var(--sapienza-red);
+            padding: 18px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 500;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: var(--box-shadow);
+        }
+
+        .subject-btn:hover {
+            background: var(--sapienza-red);
+            color: var(--sapienza-white);
+            transform: translateY(-3px);
+            box-shadow: var(--box-shadow-hover);
+        }
+
+        .config-panel {
+            background: var(--sapienza-white);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 25px;
+            display: none;
+        }
+
+        .config-panel h3 {
+            color: var(--sapienza-red);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .config-group {
+            margin-bottom: 15px;
+        }
+
+        .config-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .config-group input[type="range"] {
+            width: 100%;
+        }
+
+        .config-value {
+            font-weight: bold;
+            color: var(--sapienza-red);
+            margin-left: 10px;
+        }
+
+        .toggle-config {
+            cursor: pointer;
+            color: var(--sapienza-red);
+            text-align: right;
+            margin-bottom: 10px;
+            display: block;
+            font-weight: 500;
+        }
+
+        .toggle-config:hover {
+            text-decoration: underline;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, var(--sapienza-red) 0%, #7a0000 100%);
+            color: var(--sapienza-white);
+            border: none;
+            padding: 15px 25px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 500;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: var(--box-shadow);
+        }
+
+        .primary-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--box-shadow-hover);
+        }
+
+        .primary-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .secondary-btn {
+            background: var(--sapienza-white);
+            color: var(--sapienza-red);
+            border: 2px solid var(--sapienza-red);
+            padding: 15px 25px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 500;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: var(--box-shadow);
+        }
+
+        .secondary-btn:hover {
+            background: rgba(153, 0, 0, 0.05);
+            transform: translateY(-3px);
+            box-shadow: var(--box-shadow-hover);
+        }
+
+        .danger-btn {
+            background: var(--danger-color);
+            color: var(--sapienza-white);
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            box-shadow: var(--box-shadow);
+        }
+
+        .danger-btn:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: var(--box-shadow-hover);
+        }
+
+        .edit-btn {
+            background: var(--edit-color);
+            color: var(--sapienza-white);
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            margin-right: 10px;
+            box-shadow: var(--box-shadow);
+        }
+
+        .edit-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: var(--box-shadow-hover);
+        }
+
+        .gold-btn {
+            background: var(--sapienza-gold);
+            color: var(--sapienza-dark-gray);
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            box-shadow: var(--box-shadow);
+        }
+
+        .gold-btn:hover {
+            background: #b2a066;
+            transform: translateY(-2px);
+            box-shadow: var(--box-shadow-hover);
+        }
+
+        .results {
+            margin-top: 30px;
+        }
+
+        .duplicate-group {
+            background: var(--sapienza-white);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: var(--box-shadow);
+            position: relative;
+            transition: var(--transition);
+            border-top: 4px solid var(--sapienza-gold);
+            scroll-margin-top: 20px;
+        }
+
+        .duplicate-group.exact {
+            border-top: 4px solid var(--exact-color);
+        }
+
+        .duplicate-group.similar {
+            border-top: 4px solid var(--similar-color);
+        }
+
+        .duplicate-group:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--box-shadow-hover);
+        }
+
+        .group-actions {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+        }
+
+        .duplicate-group h3 {
+            color: var(--sapienza-red);
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-right: 180px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .question-item {
+            background: var(--sapienza-light-gray);
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: var(--border-radius);
+            border-left: 5px solid var(--sapienza-red);
+            position: relative;
+            transition: var(--transition);
+            box-shadow: var(--box-shadow);
+        }
+
+        .question-item:hover {
+            box-shadow: var(--box-shadow-hover);
+            transform: translateX(5px);
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .question-content {
+            flex: 1;
+            margin-right: 20px;
+        }
+
+        .question-actions {
+            display: flex;
+            flex-shrink: 0;
+        }
+
+        .similarity {
+            font-weight: bold;
+            color: var(--similar-color);
+            font-size: 1.2rem;
+            background: rgba(196, 179, 123, 0.1);
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+
+        .index {
+            background: var(--sapienza-red);
+            color: var(--sapienza-white);
+            padding: 6px 14px;
+            border-radius: 20px;
+            margin-right: 12px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+            box-shadow: var(--box-shadow);
+        }
+
+        .stats {
+            background: var(--sapienza-white);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            margin-bottom: 30px;
+            box-shadow: var(--box-shadow);
+        }
+
+        .stats h3 {
+            color: var(--sapienza-red);
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .stats p {
+            margin: 12px 0;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .stats p strong {
+            color: var(--sapienza-red);
+            margin-left: 5px;
+        }
+
+        .progress {
+            height: 30px;
+            background-color: #e0e0e0;
+            border-radius: 15px;
+            margin: 20px 0;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, var(--sapienza-red) 0%, #7a0000 100%);
+            text-align: center;
+            line-height: 30px;
+            color: white;
+            font-weight: bold;
+            transition: width 0.5s ease;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 5px solid var(--sapienza-light-gray);
+            border-top: 5px solid var(--sapienza-red);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 25px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+           100% { transform: rotate(360deg); }
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            background: var(--sapienza-white);
+            border-radius: var(--border-radius);
+            margin: 30px 0;
+            color: var(--sapienza-red);
+            font-size: 1.3rem;
+            box-shadow: var(--box-shadow);
+        }
+
+        .answers {
+            margin-top: 15px;
+            padding: 15px;
+            background: var(--sapienza-white);
+            border-radius: 8px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .answer {
+            padding: 8px 0;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .correct {
+            color: var(--success-color);
+            font-weight: bold;
+        }
+
+        .answer-bullet {
+            display: inline-block;
+            width: 24px;
+            font-weight: bold;
+            color: var(--sapienza-dark-gray);
+        }
+
+        .summary {
+            margin-top: 15px;
+            font-style: italic;
+            color: #777;
+        }
+
+        .save-notification {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--success-color);
+            color: white;
+            padding: 18px 28px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow-hover);
+            display: none;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Modal di modifica - Migliorato */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal {
+            background: var(--sapienza-white);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--box-shadow-hover);
+            position: relative;
+        }
+
+        .modal h3 {
+            color: var(--sapienza-red);
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--sapienza-dark-gray);
+        }
+
+        .form-group input[type="text"],
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .form-group input[type="text"]:focus,
+        .form-group textarea:focus {
+            border-color: var(--sapienza-red);
+            box-shadow: 0 0 0 2px rgba(153, 0, 0, 0.2);
+            outline: none;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .answer-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+            padding: 10px;
+            background: var(--sapienza-light-gray);
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+        }
+
+        .answer-row:hover {
+            background: #eaeaea;
+        }
+
+        .answer-row input[type="text"] {
+            flex: 1;
+            margin: 0;
+        }
+
+        .answer-row input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .answer-row label {
+            margin: 0;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-left: 12px;
+        }
+
+        .badge-exact {
+            background-color: rgba(153, 0, 0, 0.1);
+            color: var(--exact-color);
+        }
+
+        .badge-similar {
+            background-color: rgba(196, 179, 123, 0.1);
+            color: var(--similar-color);
+        }
+
+        /* Nuovi stili per la gestione delle risposte */
+        .answer-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+        
+        .danger-btn.small {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+        
+        .add-answer-btn {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            margin-top: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .add-answer-btn:hover {
+            background: #219653;
+            transform: translateY(-2px);
+        }
+
+        .correct-answer-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(39, 174, 96, 0.1);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-weight: 500;
+            color: var(--success-color);
+        }
+
+        .answer-counter {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background: var(--sapienza-red);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-size: 0.8rem;
+            margin-right: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .controls, .subject-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            .group-actions, .question-actions {
+                position: static;
+                margin-bottom: 15px;
+            }
+
+            .duplicate-group h3 {
+                padding-right: 0;
+            }
+            
+            .modal {
+                width: 95%;
+                padding: 20px;
+            }
+            
+            .question-header {
+                flex-direction: column;
+            }
+            
+            .question-actions {
+                margin-top: 15px;
+                align-self: flex-start;
+            }
+
+            .answer-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .answer-row input[type="text"] {
+                width: 100%;
+            }
+
+            .answer-controls {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+                width: 100%;
+            }
+
+            .modal-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="main-header">
+            <h1><i class="fas fa-search"></i> Quizienza Tool</h1>
+            <p>Strumento avanzato per l'analisi e la gestione delle domande duplicate</p>
+        </div>
+        
+        <div class="content">
+            <div class="subject-selector">
+                <h3><i class="fas fa-book"></i> Seleziona la materia da analizzare:</h3>
+                <div class="subject-buttons">
+                    <button class="subject-btn" onclick="loadSubject('domandeecopol.js', 'Economia Politica')">
+                        <i class="fas fa-chart-line"></i> Economia Politica
+                    </button>
+                    <button class="subject-btn" onclick="loadSubject('domandeempi.js', 'Empi')">
+                        <i class="fas fa-industry"></i> Empi 
+                    </button>
+                    <button class="subject-btn" onclick="loadSubject('domandeorganizzazione.js', 'Organizzazione')">
+                        <i class="fas fa-sitemap"></i> Organizzazione
+                    </button>
+                    <button class="subject-btn" onclick="loadSubject('domandepoleco.js', 'Politica Economica')">
+                        <i class="fas fa-landmark"></i> Politica Economica
+                    </button>
+                </div>
+            </div>
+
+            <a class="toggle-config" onclick="toggleConfigPanel()">
+                <i class="fas fa-cog"></i> Mostra/Nascondi configurazioni
+            </a>
+
+            <div class="config-panel" id="configPanel">
+                <h3><i class="fas fa-sliders-h"></i> Configurazione Analisi</h3>
+                <div class="config-group">
+                    <label for="similarityThreshold">Soglia di similarità: <span id="thresholdValue" class="config-value">80%</span></label>
+                    <input type="range" id="similarityThreshold" min="50" max="100" value="80" oninput="updateThresholdValue(this.value)">
+                    <small>Imposta la percentuale di similarità minima per considerare due domande come simili</small>
+                </div>
+                <div class="config-group">
+                    <label for="ignoreCase">Ignora maiuscole/minuscole:</label>
+                    <input type="checkbox" id="ignoreCase" checked>
+                </div>
+                <div class="config-group">
+                    <label for="ignorePunctuation">Ignora punteggiatura:</label>
+                    <input type="checkbox" id="ignorePunctuation" checked>
+                </div>
+                <div class="config-group">
+                    <label for="analyzeAnswers">Analizza anche le risposte:</label>
+                    <input type="checkbox" id="analyzeAnswers" checked>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="primary-btn" id="btnAnalyze" onclick="analyzeDuplicates()">
+                    <i class="fas fa-search"></i> Analizza Duplicati
+                </button>
+                <button class="secondary-btn" id="btnSaveChanges" onclick="saveChanges()" disabled>
+                    <i class="fas fa-save"></i> Salva Modifiche
+                </button>
+                <button class="primary-btn" onclick="salvaDomandeSuServer()">
+                    <i class="fas fa-cloud-upload-alt"></i> Salva su Server
+                </button>
+                <button class="primary-btn" onclick="downloadQuestions()">
+                    <i class="fas fa-download"></i> Scarica domande
+                </button>
+            </div>
+
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Analisi in corso...</p>
+            </div>
+
+            <div id="results" class="results"></div>
+
+            <div id="saveNotification" class="save-notification">
+                <i class="fas fa-check-circle"></i> Modifiche salvate con successo!
+            </div>
+
+            <!-- Modal per la modifica delle domande - Migliorato -->
+            <div class="modal-overlay" id="editModal">
+                <div class="modal">
+                    <h3><i class="fas fa-edit"></i> Modifica Domanda</h3>
+                    <form id="editForm">
+                        <input type="hidden" id="editIndex">
+                        <div class="form-group">
+                            <label for="editQuestion">Domanda:</label>
+                            <textarea id="editQuestion" placeholder="Inserisci il testo della domanda..." required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Risposte:</label>
+                            <div id="answerContainer">
+                                <!-- Le risposte verranno aggiunte dinamicamente -->
+                            </div>
+                            <button type="button" class="add-answer-btn" id="addAnswerBtn">
+                                <i class="fas fa-plus"></i> Aggiungi Risposta
+                            </button>
+                            <div id="answerError" style="color: var(--danger-color); display: none; margin-top: 10px;">
+                                <i class="fas fa-exclamation-circle"></i> Seleziona almeno una risposta corretta
+                            </div>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="secondary-btn" id="cancelEditBtn">Annulla</button>
+                            <button type="submit" class="primary-btn">
+                                <i class="fas fa-save"></i> Salva Modifiche
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variabili globali
+        let currentSubject = null;
+        let currentSubjectName = '';
+        let currentSubjectFile = null;
+        let originalQuestions = [];
+        let questions = [];
+        let hasUnsavedChanges = false;
+        let similarityThreshold = 0.8;
+        let lastScrollPosition = 0;
+        let currentGroupBeingEdited = null;
+        let scrollPositionBeforeModal = 0;
+
+        // Carica una materia dal server
+        function loadSubject(filename, subjectName) {
+            currentSubjectFile = filename;
+            showLoading(true);
+            currentSubjectName = subjectName;
+            
+            clearResults();
+            
+            console.log("📥 Caricamento materia:", filename);
+            
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="stats">
+                    <h3><i class="fas fa-spinner fa-spin"></i> Caricamento domande...</h3>
+                    <p>Sto caricando le domande da: <strong>${filename}</strong></p>
+                </div>
+            `;
+            
+            // Prima prova a caricare via API
+            fetch(`http://localhost:3001/api/questions/${filename}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Errore HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(loadedQuestions => {
+                    console.log("✅ Domande caricate via API:", loadedQuestions.length);
+                    questions = loadedQuestions;
+                    originalQuestions = JSON.parse(JSON.stringify(questions));
+                    
+                    showSubjectLoaded(subjectName, questions.length);
+                })
+                .catch(error => {
+                    console.error("❌ Errore caricamento API:", error);
+                    // Se l'API fallisce, prova a caricare il file direttamente
+                    loadSubjectDirect(filename, subjectName);
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+
+        function loadSubjectDirect(filename, subjectName) {
+            console.log("Tentativo di caricamento diretto del file:", filename);
+            
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="stats">
+                    <h3><i class="fas fa-spinner fa-spin"></i> Caricamento diretto...</h3>
+                    <p>Sto caricando le domande direttamente da: <strong>${filename}</strong></p>
+                </div>
+            `;
+            
+            // Crea un elemento script per caricare il file JS
+            const script = document.createElement('script');
+            script.src = filename;
+            script.onload = function() {
+                if (window.questions && Array.isArray(window.questions)) {
+                    console.log("✅ Domande caricate direttamente:", window.questions.length);
+                    questions = window.questions;
+                    originalQuestions = JSON.parse(JSON.stringify(questions));
+                    showSubjectLoaded(subjectName, questions.length);
+                } else {
+                    console.error("❌ Formato non valido dopo caricamento diretto");
+                    resultsDiv.innerHTML = `
+                        <div class="no-results">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Errore nel caricamento</h3>
+                            <p>Il file non contiene un array 'questions' valido.</p>
+                            <button class="primary-btn" onclick="loadSampleData('${subjectName}')">
+                                <i class="fas fa-play"></i> Usa dati di esempio per test
+                            </button>
+                        </div>
+                    `;
+                }
+            };
+            script.onerror = function() {
+                console.error("❌ Errore nel caricamento diretto del file");
+                resultsDiv.innerHTML = `
+                    <div class="no-results">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Errore nel caricamento</h3>
+                        <p>Impossibile caricare il file direttamente. Verifica che il file esista.</p>
+                        <button class="primary-btn" onclick="loadSampleData('${subjectName}')">
+                            <i class="fas fa-play"></i> Usa dati di esempio per test
+                        </button>
+                    </div>
+                `;
+            };
+            
+            document.head.appendChild(script);
+        }
+
+        // Carica dati di esempio in caso di errore
+        function loadSampleData(subjectName) {
+            currentSubjectName = subjectName;
+            
+            questions = [
+                {
+                    question: "Cos'è il PIL?",
+                    answers: [
+                        { text: "Prodotto Interno Lordo", correct: true },
+                        { text: "Prodotto Interno Netto", correct: false },
+                        { text: "Prodotto Importato Lordo", correct: false }
+                    ]
+                },
+                {
+                    question: "Cos'è il PIL?",
+                    answers: [
+                        { text: "Prodotto Interno Lordo", correct: true },
+                        { text: "Prodotto Interno Netto", correct: false },
+                        { text: "Prodotto Importato Lordo", correct: false }
+                    ]
+                },
+                {
+                    question: "Cosa significa PIL?",
+                    answers: [
+                        { text: "Prodotto Interno Lordo", correct: true },
+                        { text: "Prodotto Interno Netto", correct: false },
+                        { text: "Prodotto Importado Lordo", correct: false }
+                    ]
+                },
+                {
+                    question: "Qual è la definizione di inflazione?",
+                    answers: [
+                        { text: "Aumento generalizzato dei prezzi", correct: true },
+                        { text: "Diminuzione del valore della moneta", correct: false },
+                        { text: "Aumento del potere d'acquisto", correct: false }
+                    ]
+                },
+                {
+                    question: "Che cos'è l'inflazione?",
+                    answers: [
+                        { text: "Aumento generalizzato dei prezzi", correct: true },
+                        { text: "Diminuzione del valore della moneta", correct: false },
+                        { text: "Aumento del potere d'acquisto", correct: false }
+                    ]
+                }
+            ];
+            
+            originalQuestions = JSON.parse(JSON.stringify(questions));
+            
+            showSubjectLoaded(subjectName, questions.length);
+        }
+
+        // Mostra che la materia è stata caricata
+        function showSubjectLoaded(subjectName, questionCount) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="stats">
+                    <h3><i class="fas fa-check-circle"></i> Materia caricata: ${subjectName}</h3>
+                    <p>Domande caricate: <strong>${questionCount}</strong></p>
+                    <p>Pronto per l'analisi. Clicca su "Analizza Duplicati" per iniziare.</p>
+                </div>
+            `;
+            
+            document.getElementById('btnAnalyze').disabled = false;
+        }
+
+        // Analizza i duplicati
+        function analyzeDuplicates() {
+            console.log("=== ANALISI DUPLICATI INIZIATA ===");
+            
+            if (questions.length === 0) {
+                alert("Nessuna domanda caricata!");
+                return;
+            }
+            
+            showLoading(true);
+            
+            // Salva la posizione corrente dello scroll
+            lastScrollPosition = window.scrollY;
+            
+            setTimeout(() => {
+                try {
+                    console.log("🔍 Analisi di", questions.length, "domande");
+                    
+                    const duplicates = [];
+                    const analyzedPairs = new Set();
+                    
+                    const analyzeAnswersEnabled = document.getElementById('analyzeAnswers').checked;
+                    const ignoreCaseEnabled = document.getElementById('ignoreCase').checked;
+                    const ignorePunctuationEnabled = document.getElementById('ignorePunctuation').checked;
+                    
+                    // Analizza ogni coppia di domande
+                    for (let i = 0; i < questions.length; i++) {
+                        if (!questions[i]) continue;
+                        
+                        for (let j = i + 1; j < questions.length; j++) {
+                            if (!questions[j]) continue;
+                            
+                            const pairKey = `${Math.min(i, j)}-${Math.max(i, j)}`;
+                            if (analyzedPairs.has(pairKey)) continue;
+                            
+                            analyzedPairs.add(pairKey);
+                            
+                            const q1 = questions[i];
+                            const q2 = questions[j];
+                            
+                            // Confronto domande principali
+                            let similarity = calculateQuestionSimilarity(q1.question, q2.question, 
+                                ignoreCaseEnabled, ignorePunctuationEnabled);
+                            
+                            if (similarity >= similarityThreshold) {
+                                duplicates.push({
+                                    type: similarity === 1 ? "duplicato esatto" : "duplicato simile",
+                                    i: i,
+                                    j: j,
+                                    question1: q1.question,
+                                    question2: q2.question,
+                                    similarity: Math.round(similarity * 100)
+                                });
+                            }
+                            
+                            // Confronto risposte se abilitato
+                            if (analyzeAnswersEnabled) {
+                                // Per domande con risposte multiple, confrontiamo tutte le risposte corrette
+                                const answerSimilarity = calculateMultipleAnswerSimilarity(q1.answers, q2.answers,
+                                    ignoreCaseEnabled, ignorePunctuationEnabled);
+                                    
+                                if (answerSimilarity >= similarityThreshold) {
+                                    duplicates.push({
+                                        type: "risposta simile",
+                                        i: i,
+                                        j: j,
+                                        question1: `RISPOSTA: ${q1.answers.filter(a => a.correct).map(a => a.text).join(', ')}`,
+                                        question2: `RISPOSTA: ${q2.answers.filter(a => a.correct).map(a => a.text).join(', ')}`,
+                                        similarity: Math.round(answerSimilarity * 100)
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    
+                    console.log("✅ Analisi completata. Trovati", duplicates.length, "duplicati");
+                    renderDuplicatesResults(duplicates);
+                    
+                } catch (error) {
+                    console.error("❌ Errore durante l'analisi:", error);
+                    alert("Errore durante l'analisi: " + error.message);
+                } finally {
+                    showLoading(false);
+                    console.log("=== ANALISI DUPLICATI COMPLETATA ===");
+                }
+            }, 100);
+        }
+
+        // Calcola similarità tra due domande
+        function calculateQuestionSimilarity(text1, text2, ignoreCase, ignorePunctuation) {
+            if (!text1 || !text2) return 0;
+            
+            let processed1 = text1;
+            let processed2 = text2;
+            
+            if (ignoreCase) {
+                processed1 = processed1.toLowerCase();
+                processed2 = processed2.toLowerCase();
+            }
+            
+            if (ignorePunctuation) {
+                processed1 = processed1.replace(/[^\w\s]/gi, '');
+                processed2 = processed2.replace(/[^\w\s]/gi, '');
+            }
+            
+            processed1 = processed1.trim().replace(/\s+/g, ' ');
+            processed2 = processed2.trim().replace(/\s+/g, ' ');
+            
+            if (processed1 === processed2) return 1.0;
+            
+            return improvedCalculateSimilarity(processed1, processed2);
+        }
+
+        // Calcola similarità tra le risposte per domande con risposte multiple corrette
+        function calculateMultipleAnswerSimilarity(answers1, answers2, ignoreCase, ignorePunctuation) {
+            const correct1 = answers1.filter(a => a.correct).map(a => a.text);
+            const correct2 = answers2.filter(a => a.correct).map(a => a.text);
+            
+            // Se entrambe hanno 0 risposte corrette, considerale identiche
+            if (correct1.length === 0 && correct2.length === 0) return 1.0;
+            
+            // Se una ha 0 risposte corrette e l'altra no, considerale diverse
+            if (correct1.length === 0 || correct2.length === 0) return 0;
+            
+            // Calcola la similarità media tra tutte le coppie di risposte corrette
+            let totalSimilarity = 0;
+            let comparisons = 0;
+            
+            for (const ans1 of correct1) {
+                for (const ans2 of correct2) {
+                    const similarity = calculateQuestionSimilarity(ans1, ans2, ignoreCase, ignorePunctuation);
+                    totalSimilarity += similarity;
+                    comparisons++;
+                }
+            }
+            
+            return comparisons > 0 ? totalSimilarity / comparisons : 0;
+        }
+
+        // Calcola similarità tra due stringhe (algoritmo migliorato)
+        function improvedCalculateSimilarity(str1, str2) {
+            if (str1 === str2) return 1.0;
+            
+            // Normalizza le stringhe
+            const normalize = (str) => {
+                return str.toLowerCase()
+                    .replace(/[^\w\s]/gi, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            };
+            
+            const norm1 = normalize(str1);
+            const norm2 = normalize(str2);
+            
+            if (norm1 === norm2) return 1.0;
+            
+            // Usa un algoritmo più semplice ma efficace per testi più lunghi
+            const words1 = new Set(norm1.split(' '));
+            const words2 = new Set(norm2.split(' '));
+            
+            const intersection = new Set([...words1].filter(x => words2.has(x)));
+            const union = new Set([...words1, ...words2]);
+            
+            return intersection.size / union.size;
+        }
+
+        // Mostra i risultati dell'analisi
+        function renderDuplicatesResults(duplicates) {
+            const resultsDiv = document.getElementById("results");
+            resultsDiv.innerHTML = `<h2><i class="fas fa-search"></i> Analisi Duplicati (${currentSubjectName}):</h2>`;
+
+            if (duplicates.length === 0) {
+                resultsDiv.innerHTML += `
+                    <div class="no-results">
+                        <i class="fas fa-check-circle"></i> Nessun duplicato trovato!
+                        <p>Prova ad abbassare la soglia di similarità nelle impostazioni.</p>
+                    </div>
+                `;
+                // Ripristina lo scroll
+                setTimeout(() => { window.scrollTo(0, lastScrollPosition); }, 0);
+                return;
+            }
+
+            // Raggruppa i duplicati in modo più efficiente usando un Set
+            const processedIndices = new Set();
+            const groups = [];
+            
+            // Crea gruppi di domande duplicate
+            duplicates.forEach(dup => {
+                // Se una delle due domande è già stata processata, salta
+                if (processedIndices.has(dup.i) || processedIndices.has(dup.j)) {
+                    return;
+                }
+                
+                // Crea un nuovo gruppo
+                const group = [dup.i];
+                processedIndices.add(dup.i);
+                
+                // Trova tutte le domande duplicate con quelle nel gruppo
+                duplicates.forEach(otherDup => {
+                    if ((otherDup.i === dup.i || otherDup.j === dup.i) && 
+                        !processedIndices.has(otherDup.i === dup.i ? otherDup.j : otherDup.i)) {
+                        
+                        const newIndex = otherDup.i === dup.i ? otherDup.j : otherDup.i;
+                        group.push(newIndex);
+                        processedIndices.add(newIndex);
+                    }
+                });
+                
+                if (group.length > 1) {
+                    groups.push(group);
+                }
+            });
+
+            // Aggiungi domande che potrebbero essere duplicate ma non sono state processate
+            duplicates.forEach(dup => {
+                if (!processedIndices.has(dup.i)) {
+                    groups.push([dup.i]);
+                    processedIndices.add(dup.i);
+                }
+                if (!processedIndices.has(dup.j)) {
+                    groups.push([dup.j]);
+                    processedIndices.add(dup.j);
+                }
+            });
+
+            // Rimuovi gruppi duplicati e ordina
+            const uniqueGroups = Array.from(new Set(groups.map(group => group.sort().join(','))))
+                .map(groupStr => groupStr.split(',').map(Number));
+
+            // Crea l'output
+            uniqueGroups.forEach((group, groupNum) => {
+                if (group.length === 0) return;
+                
+                const mainIndex = group[0];
+                const mainQuestion = questions[mainIndex];
+                
+                if (!mainQuestion) return;
+                
+                const groupDiv = document.createElement("div");
+                groupDiv.className = "duplicate-group";
+                groupDiv.id = `group-${groupNum}`;
+                
+                groupDiv.innerHTML = `
+                    <h3>
+                        <i class="fas fa-copy"></i> Gruppo duplicati #${groupNum + 1} 
+                        <span class="badge">${group.length} occorrenze</span>
+                    </h3>
+                    <div class="group-actions">
+                        <button class="gold-btn" onclick="deleteDuplicateGroup(${mainIndex}, [${group.slice(1).join(',')}])">
+                            <i class="fas fa-trash"></i> Elimina Tutto il Gruppo
+                        </button>
+                    </div>
+                `;
+                
+                // Aggiungi tutte le domande del gruppo
+                group.forEach((index, itemIndex) => {
+                    const question = questions[index];
+                    if (!question) return;
+                    
+                    // Calcola la similarità con la domanda principale (solo per visualizzazione)
+                    let similarity = 0;
+                    let type = "duplicato";
+                    
+                    if (itemIndex > 0) {
+                        similarity = calculateQuestionSimilarity(
+                            mainQuestion.question, 
+                            question.question,
+                            document.getElementById('ignoreCase').checked,
+                            document.getElementById('ignorePunctuation').checked
+                        );
+                        type = similarity === 1 ? "duplicato esatto" : "duplicato simile";
+                    }
+                    
+                    const questionHTML = `
+                        <div class="question-item" data-index="${index}">
+                            <div class="question-header">
+                                <div class="question-content">
+                                    <span class="index">#${index}</span>
+                                    <strong>${question.question}</strong>
+                                    ${itemIndex > 0 ? `<span class="similarity">${Math.round(similarity * 100)}% ${type}</span>` : ''}
+                                </div>
+                                <div class="question-actions">
+                                    <button class="edit-btn" data-index="${index}" data-group="${groupNum}">
+                                        <i class="fas fa-edit"></i> Modifica
+                                    </button>
+                                    <button class="gold-btn" onclick="deleteQuestion(${index})">
+                                        <i class="fas fa-trash"></i> Elimina
+                                    </button>
+                                </div>
+                            </div>
+                            ${renderAnswers(question.answers)}
+                        </div>
+                    `;
+                    
+                    groupDiv.innerHTML += questionHTML;
+                });
+                
+                resultsDiv.appendChild(groupDiv);
+            });
+
+            document.getElementById('btnSaveChanges').disabled = false;
+            
+            // Ripristina la posizione dello scroll dopo un breve delay
+            setTimeout(() => {
+                window.scrollTo(0, lastScrollPosition);
+            }, 100);
+        }
+
+        // Funzione per visualizzare le risposte
+        function renderAnswers(answers) {
+            let html = '<div class="answers">';
+            answers.forEach((answer, idx) => {
+                const bullet = String.fromCharCode(65 + idx);
+                const correctClass = answer.correct ? 'correct' : '';
+                html += `<div class="answer"><span class="answer-bullet">${bullet}.</span> <span class="${correctClass}">${answer.text}</span></div>`;
+            });
+            html += '</div>';
+            return html;
+        }
+
+        // Elimina una domanda
+        function deleteQuestion(index) {
+            if (confirm("Sei sicuro di voler eliminare questa domanda?")) {
+                questions[index] = null;
+                hasUnsavedChanges = true;
+                
+                document.querySelectorAll('.question-item').forEach(item => {
+                    if (item.querySelector('.index').textContent === `#${index}`) {
+                        item.style.opacity = '0.6';
+                        item.style.textDecoration = 'line-through';
+                        const actions = item.querySelector('.question-actions');
+                        actions.innerHTML = '<span style="color: var(--danger-color);"><i class="fas fa-trash"></i> In eliminazione</span>';
+                    }
+                });
+                
+                document.getElementById('btnSaveChanges').disabled = false;
+            }
+        }
+
+        // Elimina un gruppo di duplicati
+        function deleteDuplicateGroup(mainIndex, duplicateIndexes) {
+            const allIndexes = [mainIndex, ...duplicateIndexes];
+            if (confirm(`Sei sicuro di voler eliminare tutto il gruppo (${allIndexes.length} domande)?`)) {
+                allIndexes.forEach(index => {
+                    questions[index] = null;
+                });
+                hasUnsavedChanges = true;
+                document.getElementById('btnSaveChanges').disabled = false;
+                
+                // Aggiorna l'interfaccia
+                allIndexes.forEach(index => {
+                    document.querySelectorAll(`.index`).forEach(element => {
+                        if (element.textContent === `#${index}`) {
+                            const questionItem = element.closest('.question-item');
+                            if (questionItem) {
+                                questionItem.style.opacity = '0.6';
+                                questionItem.style.textDecoration = 'line-through';
+                                questionItem.querySelector('.question-actions').innerHTML = 
+                                    '<span style="color: var(--danger-color);"><i class="fas fa-trash"></i> In eliminazione</span>';
+                            }
+                        }
+                    });
+                });
+            }
+        }
+
+        // === GESTIONE MODIFICA DOMANDE - MIGLIORATA ===
+
+        // Apri modale modifica
+        function openEditModal(index) {
+            const question = questions[index];
+            if (!question) return;
+            
+            // Salva la posizione dello scroll prima di aprire il modale
+            scrollPositionBeforeModal = window.scrollY;
+            
+            document.getElementById('editIndex').value = index;
+            document.getElementById('editQuestion').value = question.question;
+
+            const answerContainer = document.getElementById('answerContainer');
+            answerContainer.innerHTML = '';
+
+            question.answers.forEach((answer, i) => {
+                addAnswerToModal(answer.text, answer.correct, i);
+            });
+
+            document.getElementById('answerError').style.display = 'none';
+            document.getElementById('editModal').style.display = 'flex';
+            document.getElementById('editQuestion').focus();
+        }
+
+        // Aggiungi risposta al modale
+        function addAnswerToModal(text = '', correct = false, index = null) {
+            const answerContainer = document.getElementById('answerContainer');
+            const answerCount = answerContainer.children.length;
+            const answerIndex = index !== null ? index : answerCount;
+            const answerLetter = String.fromCharCode(65 + answerIndex);
+
+            const answerRow = document.createElement('div');
+            answerRow.className = 'answer-row';
+            answerRow.innerHTML = `
+                <span class="answer-counter">${answerLetter}</span>
+                <input type="text" value="${text.replace(/"/g, '&quot;')}" placeholder="Testo risposta" required>
+                <div class="answer-controls">
+                    <div class="correct-answer-label">
+                        <input type="checkbox" ${correct ? 'checked' : ''} id="correct-${answerIndex}">
+                        <label for="correct-${answerIndex}">Risposta corretta</label>
+                    </div>
+                    <button type="button" class="danger-btn small remove-answer-btn">
+                        <i class="fas fa-times"></i> Rimuovi
+                    </button>
+                </div>
+            `;
+            answerContainer.appendChild(answerRow);
+        }
+
+        // Chiudi modale
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            // Ripristina la posizione dello scroll a quella prima di aprire il modale
+            window.scrollTo(0, scrollPositionBeforeModal);
+        }
+
+        // Aggiungi nuova risposta
+        function addAnswer() {
+            addAnswerToModal();
+        }
+
+        // Aggiorna interfaccia dopo modifica
+        function updateQuestionInUI(index, questionText, answers) {
+            // Trova tutti gli elementi che mostrano questa domanda
+            const questionElements = document.querySelectorAll(`[data-index="${index}"]`);
+            
+            questionElements.forEach(item => {
+                // Aggiorna il testo della domanda
+                const questionContent = item.querySelector('.question-content strong');
+                if (questionContent) {
+                    questionContent.textContent = questionText;
+                }
+                
+                // Aggiorna le risposte
+                const answersContainer = item.querySelector('.answers');
+                if (answersContainer) {
+                    answersContainer.innerHTML = '';
+                    answers.forEach((answer, idx) => {
+                        const bullet = String.fromCharCode(65 + idx);
+                        const correctClass = answer.correct ? 'correct' : '';
+                        answersContainer.innerHTML += `
+                            <div class="answer">
+                                <span class="answer-bullet">${bullet}.</span> 
+                                <span class="${correctClass}">${answer.text}</span>
+                            </div>
+                        `;
+                    });
+                }
+            });
+        }
+
+        // Salva le modifiche
+        function saveChanges() {
+            // Filtra le domande valide (non eliminate)
+            const validQuestions = questions.filter(q => q !== null);
+            
+            if (validQuestions.length === 0) {
+                alert("Non ci sono domande da salvare!");
+                return;
+            }
+            
+            questions = validQuestions;
+            originalQuestions = JSON.parse(JSON.stringify(questions));
+            hasUnsavedChanges = false;
+            document.getElementById('btnSaveChanges').disabled = true;
+            
+            showSaveNotification("Modifiche salvate localmente!");
+            
+            // Ricarica l'analisi per aggiornare l'interfaccia
+            analyzeDuplicates();
+        }
+
+        // Salva le domande sul server
+        function salvaDomandeSuServer() {
+            if (!currentSubjectFile) {
+                alert("Nessuna materia selezionata!");
+                return;
+            }
+            
+            if (questions.length === 0) {
+                alert("Nessuna domanda da salvare!");
+                return;
+            }
+            
+            showLoading(true);
+            
+            const questionsToSave = questions.filter(q => q !== null);
+            
+            fetch('http://localhost:3001/api/save-questions', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    filename: currentSubjectFile,
+                    questions: questionsToSave
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Errore server: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    showSaveNotification("Domande salvate con successo sul server!");
+                    hasUnsavedChanges = false;
+                    document.getElementById('btnSaveChanges').disabled = true;
+                    
+                    loadSubject(currentSubjectFile, currentSubjectName);
+                } else {
+                    throw new Error(data.error || "Errore sconosciuto nel salvataggio");
+                }
+            })
+            .catch(error => {
+                console.error("❌ Errore salvataggio:", error);
+                alert("Errore nel salvataggio: " + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+        }
+
+        // Scarica le domande come file
+        function downloadQuestions() {
+            if (questions.length === 0) {
+                alert("Nessuna domanda da scaricare!");
+                return;
+            }
+            
+            let fileContent = "// File aggiornato automaticamente da Quizienza Tool\n";
+            fileContent += "// Data: " + new Date().toLocaleString() + "\n\n";
+            fileContent += "window.questions = [\n";
+            
+            questions.forEach((question, index) => {
+                if (question === null) return;
+                
+                fileContent += "  {\n";
+                fileContent += `    question: "${question.question.replace(/"/g, '\\"')}",\n`;
+                fileContent += "    answers: [\n";
+                
+                question.answers.forEach((answer, ansIndex) => {
+                    fileContent += `      { text: "${answer.text.replace(/"/g, '\\"')}", correct: ${answer.correct} }`;
+                    if (ansIndex < question.answers.length - 1) {
+                        fileContent += ",";
+                    }
+                    fileContent += "\n";
+                });
+                
+                fileContent += "    ]\n";
+                fileContent += "  }";
+                if (index < questions.length - 1) {
+                    fileContent += ",";
+                }
+                fileContent += "\n";
+            });
+            
+            fileContent += "];";
+            
+            const blob = new Blob([fileContent], { type: 'application/javascript' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = currentSubjectFile || 'domande_aggiornate.js';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showSaveNotification("File scaricato con successo!");
+        }
+
+        // Mostra/nascondi pannello configurazione
+        function toggleConfigPanel() {
+            const panel = document.getElementById('configPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Aggiorna valore soglia similarità
+        function updateThresholdValue(value) {
+            similarityThreshold = value / 100;
+            document.getElementById('thresholdValue').textContent = `${value}%`;
+        }
+
+        // Mostra/nascondi il loading
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Pulisci i risultati
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('btnSaveChanges').disabled = true;
+            hasUnsavedChanges = false;
+        }
+
+        // Mostra notifica di salvataggio
+        function showSaveNotification(message) {
+            const notif = document.getElementById('saveNotification');
+            notif.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            notif.style.display = "block";
+            setTimeout(() => {
+                notif.style.display = "none";
+            }, 3000);
+        }
+
+        // === INIZIALIZZAZIONE E GESTIONE EVENTI ===
+
+        // Inizializza l'applicazione
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Tool Quizienza inizializzato');
+            
+            updateThresholdValue(80);
+            document.getElementById('ignoreCase').checked = true;
+            document.getElementById('ignorePunctuation').checked = true;
+            document.getElementById('analyzeAnswers').checked = true;
+            
+            // Event delegation per i pulsanti modifica
+            document.addEventListener('click', function(e) {
+                // Pulsante Modifica
+                if (e.target.closest('.edit-btn')) {
+                    const editBtn = e.target.closest('.edit-btn');
+                    const index = editBtn.getAttribute('data-index');
+                    if (index) {
+                        openEditModal(parseInt(index));
+                    }
+                }
+                
+                // Pulsante Aggiungi Risposta nel modale
+                if (e.target.id === 'addAnswerBtn' || e.target.closest('#addAnswerBtn')) {
+                    addAnswer();
+                }
+                
+                // Pulsante Rimuovi Risposta nel modale
+                if (e.target.closest('.remove-answer-btn')) {
+                    const removeBtn = e.target.closest('.remove-answer-btn');
+                    const answerContainer = document.getElementById('answerContainer');
+                    if (answerContainer.children.length > 1) {
+                        removeBtn.closest('.answer-row').remove();
+                        
+                        // Rinumera le risposte rimanenti
+                        const answerRows = answerContainer.children;
+                        for (let i = 0; i < answerRows.length; i++) {
+                            const counter = answerRows[i].querySelector('.answer-counter');
+                            counter.textContent = String.fromCharCode(65 + i);
+                        }
+                    } else {
+                        alert("Deve esserci almeno una risposta!");
+                    }
+                }
+                
+                // Pulsante Annulla nel modale
+                if (e.target.id === 'cancelEditBtn' || e.target.closest('#cancelEditBtn')) {
+                    closeEditModal();
+                }
+                
+                // Click sull'overlay per chiudere il modale
+                if (e.target.id === 'editModal') {
+                    closeEditModal();
+                }
+            });
+
+            // Gestione submit del form di modifica
+            document.getElementById('editForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const index = parseInt(document.getElementById('editIndex').value);
+                const questionText = document.getElementById('editQuestion').value.trim();
+
+                if (!questionText) {
+                    alert("Inserisci il testo della domanda!");
+                    return;
+                }
+
+                const answerRows = document.getElementById('answerContainer').children;
+                const answers = [];
+
+                for (let i = 0; i < answerRows.length; i++) {
+                    const textInput = answerRows[i].querySelector('input[type="text"]');
+                    const checkboxInput = answerRows[i].querySelector('input[type="checkbox"]');
+
+                    const answerText = textInput.value.trim();
+                    if (!answerText) {
+                        alert("Tutte le risposte devono avere un testo!");
+                        return;
+                    }
+
+                    const isCorrect = checkboxInput.checked;
+
+                    answers.push({
+                        text: answerText,
+                        correct: isCorrect
+                    });
+                }
+
+                // Aggiorna l'array globale
+                questions[index] = { question: questionText, answers: answers };
+                hasUnsavedChanges = true;
+
+                // Aggiorna l'interfaccia
+                updateQuestionInUI(index, questionText, answers);
+
+                closeEditModal();
+                document.getElementById('btnSaveChanges').disabled = false;
+                showSaveNotification("Domanda modificata con successo!");
+            });
+
+            // Gestione tasto ESC per chiudere il modale
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && document.getElementById('editModal').style.display === 'flex') {
+                    closeEditModal();
+                }
+            });
+            
+            window.addEventListener('beforeunload', function(e) {
+                if (hasUnsavedChanges) {
+                    const message = "Ci sono modifiche non salvate. Sei sicuro di voler lasciare la pagina?";
+                    e.returnValue = message;
+                    return message;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

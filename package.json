@@ -1,0 +1,16 @@
+{
+  "name": "generate",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "generate-token.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.2"
+  }
+}
