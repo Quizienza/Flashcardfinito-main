@@ -505,6 +505,24 @@ function closeManageFlashcardsModal() {
     }
 }
 
+// Accesso rapido alla gestione/creazione delle carte utente
+function openUserCardsPanel() {
+    try {
+        // Se esiste già il modale di gestione, non duplicarlo
+        if (!document.getElementById('manage-flashcards-modal')) {
+            showManageFlashcardsModal();
+        }
+        // Porta in primo piano e, se la lista è vuota, invita a creare
+        setTimeout(() => {
+            const list = document.getElementById('user-flashcards-list');
+            if (!list || list.children.length === 0) {
+                // Apri direttamente la creazione se non ci sono carte
+                try { showAddFlashcardModal(); } catch(_) {}
+            }
+        }, 150);
+    } catch(e) { console.warn('openUserCardsPanel failed:', e); }
+}
+
 function generateUserFlashcardsList() {
     if (userCustomFlashcards.length === 0) {
         return `
@@ -1006,16 +1024,13 @@ function rateCardWithInterval(intervalMs) {
             if (typeof updateGlobalStats === 'function') updateGlobalStats();
         } catch (e) { console.warn('updateModeCounters failed:', e); }
 
-        // Hook slancio: conteggia una carta completata
+        // Hook slancio: conteggia una carta completata; se raggiungi la soglia, apri la tendina
         try {
             if (typeof recordStudySession === 'function') {
                 const reached = recordStudySession(1);
-                if (reached && typeof showStreakPopup === 'function') {
+                if (reached) {
                     try { window.__lastSessionStudiedCount = getTodayStudiedCount(); } catch (_) { }
-                    showStreakPopup('session_end');
-                    try { streakPopupFixNumbers('session_end'); } catch (_) {}
-                } else {
-                    maybeShowStreakAfterIncrement();
+                    // Non aprire il pannello qui; lo apriremo su endSession
                 }
             }
         } catch (e) { console.warn('streak record (due) failed:', e); }
@@ -1045,31 +1060,25 @@ function rateCardWithInterval(intervalMs) {
         setTimeout(() => {
             updateModeCounters();
         }, 100);
-        // Hook slancio: ogni carta completata incrementa e, se raggiunge la soglia, apre la tendina
+        // Hook slancio: ogni carta completata incrementa; se raggiungi la soglia, apri la tendina
         try {
             if (typeof recordStudySession === 'function') {
                 const reached = recordStudySession(1);
-                if (reached && typeof showStreakPopup === 'function') {
+                if (reached) {
                     try { window.__lastSessionStudiedCount = getTodayStudiedCount(); } catch(_) {}
-                    showStreakPopup('session_end');
-                    try { streakPopupFixNumbers('session_end'); } catch(_){}
-                } else {
-                    maybeShowStreakAfterIncrement();
+                    // Non aprire il pannello qui; lo apriremo su endSession
                 }
             }
         } catch (e) { console.warn('streak record failed:', e); }
     } else {
         console.log(`📚 Modalità "${currentStudyMode}": carta NON modificata`);
-        // Hook slancio anche in 'all', 'default' e varianti user: ogni carta vale per la soglia giornaliera
+        // Hook slancio anche in 'all', 'default' e varianti user: ogni carta vale per la soglia giornaliera; se raggiungi la soglia, apri la tendina
         try {
             if (typeof recordStudySession === 'function') {
                 const reached = recordStudySession(1);
-                if (reached && typeof showStreakPopup === 'function') {
+                if (reached) {
                     try { window.__lastSessionStudiedCount = getTodayStudiedCount(); } catch(_) {}
-                    showStreakPopup('session_end');
-                    try { streakPopupFixNumbers('session_end'); } catch(_){}
-                } else {
-                    maybeShowStreakAfterIncrement();
+                    // Non aprire il pannello qui; lo apriremo su endSession
                 }
             }
         } catch (e) { console.warn('streak record (readonly) failed:', e); }
@@ -2349,9 +2358,9 @@ function renderFlashcardsScreen() {
     initializeFlashcardSettings();
     // Streak popup automatico al primo accesso del giorno se non completato
     try {
-        if (hasSeenModesHelp() && typeof showStreakPopup === 'function') {
-            showStreakPopup('auto');
-            try { streakPopupFixNumbers('auto'); } catch(_){}
+        // Usa il wrapper con controllo "una volta al giorno"
+        if (hasSeenModesHelp() && typeof maybeShowDailyStreakPopup === 'function') {
+            maybeShowDailyStreakPopup('auto');
         }
     } catch (e) { console.warn('streak auto popup failed:', e); }
 }
@@ -2455,6 +2464,58 @@ function hasShownStreakPopupToday() {
 function markStreakPopupShownToday() {
     try { localStorage.setItem(getStreakPopupKey(), todayISO()); } catch { }
 }
+
+// === Missed-day popup (tendina Slancio) ===
+const MISSED_POPUP_KEY_BASE = 'quizienza_streak_missed_popup_shown';
+function getMissedPopupKey() {
+    const user = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : 'anonymous';
+    return `${MISSED_POPUP_KEY_BASE}_${user}_diritto_privato`;
+}
+function hasShownMissedPopupToday() {
+    try { return localStorage.getItem(getMissedPopupKey()) === todayISO(); } catch { return false; }
+}
+function markMissedPopupShownToday() {
+    try { localStorage.setItem(getMissedPopupKey(), todayISO()); } catch { }
+}
+function _missedYesterday() {
+    try {
+        // Preferisci il nuovo sistema
+        if (typeof getTodayDate === 'function' && typeof formatDateStorage === 'function' && typeof streakState !== 'undefined') {
+            const y = new Date(getTodayDate());
+            y.setDate(y.getDate() - 1);
+            const yStr = formatDateStorage(y);
+            const entry = (streakState.history || []).find(e => formatDateStorage(e.date) === yStr);
+            const goal = (streakState.dailyCardGoal || 1);
+            return !(entry && (entry.cardsStudied || 0) >= goal);
+        }
+    } catch (_) { /* fall-through */ }
+    try {
+        // Fallback sistema precedente
+        if (typeof streakData !== 'undefined') {
+            const fmt = (d) => (typeof formatDateForStorage === 'function') ? formatDateForStorage(d) : d.toISOString().slice(0,10);
+            const now = new Date();
+            const y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+            const yStr = fmt(y);
+            const entry = (streakData.history || []).find(e => fmt(new Date(e.date)) === yStr);
+            const goal = (streakData.dailyCardGoal || 1);
+            return !(entry && (entry.cardsStudied || 0) >= goal);
+        }
+    } catch (_) { }
+    return false;
+}
+
+// === Completion popup (mostra solo una volta quando completi la soglia) ===
+const STREAK_COMPLETION_KEY_BASE = 'quizienza_streak_completion_popup_shown';
+function getCompletionPopupKey() {
+  const user = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : 'anonymous';
+  return `${STREAK_COMPLETION_KEY_BASE}_${user}_diritto_privato`;
+}
+function hasShownCompletionPopupToday() {
+  try { return localStorage.getItem(getCompletionPopupKey()) === todayISO(); } catch { return false; }
+}
+function markCompletionPopupShownToday() {
+  try { localStorage.setItem(getCompletionPopupKey(), todayISO()); } catch { }
+}
 function maybeShowDailyStreakPopup(context = 'auto') {
     if (context !== 'auto') return;
     try {
@@ -2463,11 +2524,19 @@ function maybeShowDailyStreakPopup(context = 'auto') {
 
         const tryShow = () => {
             // Streak popup: 1 volta al giorno, solo dopo la guida
-            try { if (typeof maybeShowDailyStreakPopup === 'function') maybeShowDailyStreakPopup('auto'); } catch (_) { }
+            try {
+                if (typeof window.showStreakPopup === 'function') {
+                    window.showStreakPopup('auto');
+                    // marca come mostrato per oggi
+                    markStreakPopupShownToday();
+                    try { if (typeof streakPopupFixNumbers === 'function') streakPopupFixNumbers('auto'); } catch(_){ }
+                }
+            } catch (_) { }
         };
 
         const waitGuide = () => {
-            if (document.getElementById('modes-help-modal')) {
+            // aspetta chiusura guida e della tendina Slancio se aperta per altri motivi
+            if (document.getElementById('modes-help-modal') || document.getElementById('streak-popup')) {
                 setTimeout(waitGuide, 800);
             } else {
                 tryShow();
@@ -2599,12 +2668,16 @@ function ensureStreakAugmentation(context) {
             window.__origShowStreakPopupRef = (typeof window.showStreakPopup === 'function') ? window.showStreakPopup : null;
         }
         window.showStreakPopup = function (context = 'auto') {
-            // chiama l'originale se esiste
+            // Regola: 
+            // - 'auto' => solo popup leggero "Completa la soglia di oggi" (NO pannello Slancio)
+            // - 'session_end' o 'manual' => pannello Slancio originale
+            if (context === 'auto') {
+                try { ensureStreakAugmentation(context); } catch (e) { console.warn('ensureStreakAugmentation failed:', e); }
+                return;
+            }
             if (typeof window.__origShowStreakPopupRef === 'function') {
                 try { window.__origShowStreakPopupRef(context); } catch (e) { console.warn('orig showStreakPopup failed:', e); }
             }
-            // poi aggiunge/aggiorna UI
-            try { ensureStreakAugmentation(context); } catch (e) { console.warn('ensureStreakAugmentation failed:', e); }
         };
     }
     // post-macro-task per garantire che definizioni successive siano già presenti
@@ -2643,11 +2716,8 @@ function _streakTodayCompleted() {
     } catch (_) { return false; }
 }
 function maybeShowStreakAfterIncrement() {
-    try {
-        if (typeof showStreakPopup === 'function' && _streakTodayCompleted()) {
-            showStreakPopup('session_end');
-        }
-    } catch (_) { }
+    // Non aprire più il pannello "Slancio di Studio" al raggiungimento della soglia
+    return;
 }
 // === Streak: carte studiate OGGI ===
 function getTodayStudiedCount() {
@@ -2800,7 +2870,7 @@ function generateStudyOptionsHTML(stats) {
                             </div>
                             <div class="card-content">
                                 <h4>Le tue Flashcard</h4>
-                                <p>Studia le flashcard che hai creato tu</p>
+                                <p>Studia le flashcard che hai <a href="#" onclick="event.stopPropagation(); openUserCardsPanel(); return false;"><u>creato tu</u></a></p>
                                 <div class="card-progress">
                                     <div class="progress-bar">
                                         <div class="progress-fill" style="width: ${stats.totalCards > 0 ? (stats.userNewCards / stats.totalCards) * 100 : 0}%"></div>
@@ -4579,38 +4649,23 @@ function formatDateForDisplay(date) {
                 } catch (_) { /* noop */ }
 
                 // Registra nel nuovo sistema (streakState) il numero reale di carte della sessione
+                let justCompleted = false;
                 if (cardsStudied > 0) {
-                    try { recordSession(cardsStudied); } catch (_) { }
+                    try { justCompleted = !!recordSession(cardsStudied); } catch (_) { justCompleted = false; }
                 }
 
-                // Mostra il popup "Slancio di studio" SOLO se la giornata è completa
+                // Mostra il popup "Slancio di studio" SOLO se la giornata è appena stata completata
                 try {
-                    let dayCompleted = false;
-                    // Nuovo sistema
-                    if (typeof getTodayDate === 'function' && typeof formatDateStorage === 'function' && typeof streakState !== 'undefined') {
-                        const todayStr = formatDateStorage(getTodayDate());
-                        const entry = (streakState.history || []).find(e => formatDateStorage(e.date) === todayStr);
-                        dayCompleted = !!(entry && (entry.cardsStudied || 0) >= (streakState.dailyCardGoal || 1));
-                    }
-                    // Fallback sistema precedente
-                    if (!dayCompleted && typeof window._streakTodayCompleted === 'function') {
-                        dayCompleted = !!window._streakTodayCompleted();
-                    } else if (!dayCompleted && typeof window.streakData !== 'undefined') {
-                        // Ultimo fallback esplicito
-                        const fmt = d => (typeof formatDateForStorage === 'function') ? formatDateForStorage(d) : new Date(d).toISOString().slice(0,10);
-                        const todayStr = fmt(new Date());
-                        const entry = (window.streakData.history || []).find(e => fmt(new Date(e.date)) === todayStr);
-                        dayCompleted = entry ? ((entry.cardsStudied || 0) >= (window.streakData.dailyCardGoal || 1)) : false;
-                    }
-
-                    if (dayCompleted) {
-                        if (typeof window.StreakSystem !== 'undefined' && typeof window.StreakSystem.show === 'function') {
-                            try { window.StreakSystem.show('session_end'); } catch(_) { window.StreakSystem.show(); }
+                    if (justCompleted && !hasShownCompletionPopupToday()) {
+                        try {
+                            if (typeof window.StreakSystem !== 'undefined' && typeof window.StreakSystem.show === 'function') {
+                                window.StreakSystem.show('session_end');
+                            } else if (typeof window.showStreakPopup === 'function') {
+                                window.showStreakPopup('session_end');
+                            }
                             try { if (typeof streakPopupFixNumbers === 'function') streakPopupFixNumbers('session_end'); } catch(_){}
-                        } else if (typeof window.showStreakPopup === 'function') {
-                            window.showStreakPopup('session_end');
-                            try { if (typeof streakPopupFixNumbers === 'function') streakPopupFixNumbers('session_end'); } catch(_){}
-                        }
+                            markCompletionPopupShownToday();
+                        } catch(_){ }
                     }
                 } catch (e) { console.warn('streak popup show (post endSession) failed:', e); }
             };
@@ -4638,14 +4693,11 @@ function formatDateForDisplay(date) {
             const flashcardsScreen = document.getElementById('flashcards-screen');
             if (flashcardsScreen && flashcardsScreen.style.display !== 'none') {
                 injectIndicator();
-
-                // Mostra popup auto solo la prima volta
-                const today = formatDateStorage(getTodayDate());
-                const lastShown = localStorage.getItem(STREAK_CONFIG.popupShownKey);
-
-                if (lastShown !== today) {
-                    setTimeout(() => showPopup('auto'), 1500);
-                }
+                // Disabilitato: non aprire automaticamente il popup "Slancio di Studio".
+                // La logica giornaliera ora è gestita da maybeShowDailyStreakPopup() che mostra
+                // solo il popup leggero "Completa la soglia di oggi" una volta al giorno.
+                // Non aprire più automaticamente la tendina in caso di giorno saltato:
+                // il pannello grande deve comparire SOLO nel momento in cui completi la soglia odierna
             }
         });
 
@@ -4835,13 +4887,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const state = (typeof streakData !== 'undefined' && streakData) ? streakData : {current:0, goal:7, dailyCardGoal:5, history:[], longest:0, totalSessions:0, totalCardsStudied:0};
     const cfg = (typeof STREAK_CONFIG !== 'undefined' && STREAK_CONFIG) ? STREAK_CONFIG : { popupShownKey: 'quizienza_streak_popup_shown' };
 
+    // AUTO: non mostrare il pannello grande. Usa solo il popup leggero
     if (context === 'auto') {
-      const today = fmtStore(safeToday());
-      const last = localStorage.getItem(cfg.popupShownKey);
-      if (last === today) return;
-      const todayEntry = (state.history||[]).find(e => fmtStore(e.date) === today);
-      if (todayEntry && (todayEntry.cardsStudied||0) >= (state.dailyCardGoal||1)) return;
-      try { localStorage.setItem(cfg.popupShownKey, today); } catch(_){ }
+      try {
+        const today = fmtStore(safeToday());
+        const last = localStorage.getItem(cfg.popupShownKey);
+        if (last !== today) { try { localStorage.setItem(cfg.popupShownKey, today); } catch(_){} }
+        if (typeof ensureStreakAugmentation === 'function') ensureStreakAugmentation('auto');
+      } catch(_) { }
+      return;
     }
 
     const prev = document.getElementById('streak-popup');
@@ -4862,6 +4916,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const pct = Math.min(100, (state.current||0) / (state.goal||1) * 100);
 
     overlay.innerHTML = `
+      <style id="streak-popup-btn-styles">#streak-popup .streak-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.9rem 1.2rem;border-radius:12px;border:1px solid ${hairline};cursor:pointer;font-weight:700;letter-spacing:.2px;transition:transform .15s ease, box-shadow .15s ease, background .2s ease;box-shadow:0 6px 14px rgba(0,0,0,.08)}#streak-popup .streak-btn i{opacity:.95}#streak-popup .streak-btn--primary{background:linear-gradient(135deg,#802433,#660a1f);color:#fff;border:none;box-shadow:0 10px 20px rgba(128,36,51,.35), inset 0 1px 0 rgba(255,255,255,.08)}#streak-popup .streak-btn--primary:hover{transform:translateY(-2px);box-shadow:0 14px 26px rgba(128,36,51,.45)}#streak-popup .streak-btn--primary:active{transform:translateY(0)}#streak-popup .streak-btn--ghost{background:${surface};color:${isDark?'#f3f4f6':'#222'};}#streak-popup .streak-btn--ghost:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(0,0,0,.12)}#streak-popup .streak-btn--ghost:active{transform:translateY(0)}</style>
       <div style="background:${sheetBg};border-radius:18px;width:90%;max-width:480px;max-height:90vh;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.35);transform:perspective(1200px) translateY(8px) scale(0.96) rotateX(2deg);transition:transform 280ms cubic-bezier(.2,.8,.2,1);">
         <div style="background:linear-gradient(135deg,#802433,#660a1f);color:#fff;padding:1.5rem;display:flex;justify-content:space-between;align-items:center;">
           <div style="display:flex;align-items:center;gap:.75rem;"><i class=\"fas fa-fire\" style=\"font-size:1.8rem;color:#FFD700;\"></i><h3 style=\"margin:0;font-size:1.4rem;\">Slancio di Studio</h3></div>

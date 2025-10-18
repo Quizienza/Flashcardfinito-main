@@ -409,12 +409,16 @@ function startQuiz() {
         originalWrongAnswers = [];
         const selectedCount = parseInt(questionCountSelect.value);
         
-        if (selectedCount === 15) {
-            totalTimeAllowed = 30 * 60;
+        // Tempo consentito in base al numero di domande
+        // Richiesta: 20 domande -> 40 minuti
+        if (selectedCount === 20) {
+            totalTimeAllowed = 40 * 60; // 40 minuti
         } else if (selectedCount === 30) {
-            totalTimeAllowed = 45 * 60;
+            totalTimeAllowed = 45 * 60; // compatibilità (se presente nelle opzioni)
+        } else if (selectedCount === 15) {
+            totalTimeAllowed = 30 * 60; // compatibilità legacy
         } else {
-            totalTimeAllowed = 0;
+            totalTimeAllowed = 0; // senza tempo
         }
         
         totalQuestions = selectedCount > 0 ? Math.min(selectedCount, questions.length) : questions.length;
